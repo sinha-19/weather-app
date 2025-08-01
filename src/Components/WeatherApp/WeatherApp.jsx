@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './WeatherApp.css';
 
 import search_icon from '../Assets/search.png';
@@ -11,92 +11,172 @@ import wind_icon from '../Assets/wind.png';
 import humidity_icon from '../Assets/humidity.png';
 
 const WeatherApp = () => {
-  let api_key = "cb3a051c385fa934d6e74650e77d4fbc";
+  const api_key = "cb3a051c385fa934d6e74650e77d4fbc";
 
+  const [weatherData, setWeatherData] = useState({
+    temperature: "24°C",
+    location: "London",
+    humidity: "64%",
+    windSpeed: "18 km/h",
+    description: "Clear sky",
+    feelsLike: "26°C",
+    pressure: "1013 hPa",
+    visibility: "10 km",
+    uvIndex: "5"
+  });
+  
   const [wicon, setWicon] = useState(cloud_icon);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [searchInput, setSearchInput] = useState("");
 
-  const search = async () => {
-    const element = document.getElementsByClassName("cityInput");
-    if (element[0].value === "") {
-      return 0;
+  // Load default weather on component mount
+  useEffect(() => {
+    searchWeather("London");
+  }, []);
+
+  const getWeatherIcon = (iconCode) => {
+    const iconMap = {
+      "01d": clear_icon, "01n": clear_icon,
+      "02d": cloud_icon, "02n": cloud_icon,
+      "03d": drizzle_icon, "03n": drizzle_icon,
+      "04d": drizzle_icon, "04n": drizzle_icon,
+      "09d": rain_icon, "09n": rain_icon,
+      "10d": rain_icon, "10n": rain_icon,
+      "11d": rain_icon, "11n": rain_icon,
+      "13d": snow_icon, "13n": snow_icon,
+      "50d": cloud_icon, "50n": cloud_icon
+    };
+    return iconMap[iconCode] || clear_icon;
+  };
+
+  const searchWeather = async (city) => {
+    if (!city.trim()) {
+      setError("Please enter a city name");
+      return;
     }
-    let url = `http://api.openweathermap.org/data/2.5/weather?q=${element[0].value}&units=metric&APPID=${api_key}`;
+
+    setLoading(true);
+    setError("");
 
     try {
-      let response = await fetch(url);
-      let data = await response.json();
+      const url = `https://api.openweathermap.org/data/2.5/weather?q=${city}&units=metric&APPID=${api_key}`;
+      const response = await fetch(url);
+      
+      if (!response.ok) {
+        throw new Error(response.status === 404 ? "City not found" : "Weather data unavailable");
+      }
+      
+      const data = await response.json();
 
       if (!data.main || !data.wind || !data.weather || !data.name) {
-        return;
+        throw new Error("Invalid weather data received");
       }
-      const humidity = document.getElementsByClassName("humidity-percent");
-      const wind = document.getElementsByClassName("wind-rate");
-      const temperature = document.getElementsByClassName("weather-temp");
-      const location = document.getElementsByClassName("weather-location");
 
-      humidity[0].innerHTML = data.main.humidity+" %";
-      wind[0].innerHTML = Math.floor(data.wind.speed)+" km/h";
-      temperature[0].innerHTML = Math.floor(data.main.temp)+"°C";
-      location[0].innerHTML = data.name;
+      setWeatherData({
+        temperature: `${Math.round(data.main.temp)}°C`,
+        location: data.name,
+        humidity: `${data.main.humidity}%`,
+        windSpeed: `${Math.round(data.wind.speed * 3.6)} km/h`,
+        description: data.weather[0].description,
+        feelsLike: `${Math.round(data.main.feels_like)}°C`,
+        pressure: `${data.main.pressure} hPa`,
+        visibility: `${Math.round(data.visibility / 1000)} km`,
+        uvIndex: "N/A" // UV index requires separate API call
+      });
 
-      if(data.weather[0].icon==="01d" || data.weather[0].icon==="01n"){
-          setWicon(clear_icon);
-      }
-      else if(data.weather[0].icon==="02d" || data.weather[0].icon==="02n"){
-          setWicon(cloud_icon);
-      }
-      else if(data.weather[0].icon==="03d" || data.weather[0].icon==="03n"){
-          setWicon(drizzle_icon);
-      }
-      else if(data.weather[0].icon==="04d" || data.weather[0].icon==="04n"){
-          setWicon(drizzle_icon);
-      }
-      else if(data.weather[0].icon==="09d" || data.weather[0].icon==="09n"){
-          setWicon(rain_icon);
-      }
-      else if(data.weather[0].icon==="10d" || data.weather[0].icon==="10n"){
-          setWicon(rain_icon);
-      }
-      else if(data.weather[0].icon==="13d" || data.weather[0].icon==="13n"){
-          setWicon(snow_icon);
-      }
-      else{
-          setWicon(clear_icon);
-      }
-  }catch (error) {
+      setWicon(getWeatherIcon(data.weather[0].icon));
+      setSearchInput("");
+      
+    } catch (error) {
       console.error("Error fetching weather data:", error);
+      setError(error.message || "Failed to fetch weather data");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSearch = () => {
+    searchWeather(searchInput);
+  };
+
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      handleSearch();
     }
   };
 
   return (
     <div className='container'>
       <div className="top-bar">
-        <input type="text" className="cityInput" placeholder='Search'/>
-        <div className="search-icon" onClick={() => search()}>
-          <img src={search_icon} alt="" />
+        <input 
+          type="text" 
+          className="cityInput" 
+          placeholder='Enter city name...'
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
+          onKeyPress={handleKeyPress}
+        />
+        <div className="search-icon" onClick={handleSearch}>
+          <img src={search_icon} alt="Search" />
         </div>
       </div>
-      <div className="weather-image">
-        <img src={wicon} alt="" />
-      </div>
-      <div className="weather-temp">24°C</div>
-      <div className="weather-location">London</div>
-      <div className="data-container">
-        <div className="element">
-          <img src={humidity_icon} alt="" className="icon" />
-          <div className="data">
-            <div className="humidity-percent">64%</div>
-            <div className="text">Humidity</div>
+
+      {loading && (
+        <div className="loading">
+          <div className="spinner"></div>
+        </div>
+      )}
+
+      {error && (
+        <div className="error">
+          {error}
+        </div>
+      )}
+
+      {!loading && !error && (
+        <>
+          <div className="weather-image">
+            <img src={wicon} alt="Weather" />
           </div>
-        </div>
-        <div className="element">
-          <img src={wind_icon} alt="" className="icon" />
-          <div className="data">
-            <div className="wind-rate">18 km/h</div>
-            <div className="text">Wind Speed</div>
+          
+          <div className="weather-temp">{weatherData.temperature}</div>
+          <div className="weather-location">{weatherData.location}</div>
+          <div className="weather-description">{weatherData.description}</div>
+          
+          <div className="data-container">
+            <div className="element">
+              <img src={humidity_icon} alt="Humidity" className="icon" />
+              <div className="data">{weatherData.humidity}</div>
+              <div className="text">Humidity</div>
+            </div>
+            <div className="element">
+              <img src={wind_icon} alt="Wind" className="icon" />
+              <div className="data">{weatherData.windSpeed}</div>
+              <div className="text">Wind Speed</div>
+            </div>
           </div>
-        </div>
-      </div>
+
+          <div className="additional-info">
+            <div className="info-card">
+              <div className="label">Feels Like</div>
+              <div className="value">{weatherData.feelsLike}</div>
+            </div>
+            <div className="info-card">
+              <div className="label">Pressure</div>
+              <div className="value">{weatherData.pressure}</div>
+            </div>
+            <div className="info-card">
+              <div className="label">Visibility</div>
+              <div className="value">{weatherData.visibility}</div>
+            </div>
+            <div className="info-card">
+              <div className="label">UV Index</div>
+              <div className="value">{weatherData.uvIndex}</div>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 };
