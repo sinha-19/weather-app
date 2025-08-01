@@ -114,6 +114,61 @@ body {
   opacity: 0.7;
 }
 
+.suggestions-container {
+  position: relative;
+  width: 280px;
+}
+
+.suggestions-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 1000;
+  margin-top: 8px;
+}
+
+.suggestion-item {
+  padding: 12px 20px;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  color: #333;
+  font-size: 14px;
+  font-weight: 500;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.suggestion-item:last-child {
+  border-bottom: none;
+}
+
+.suggestion-item:hover {
+  background: rgba(103, 126, 234, 0.1);
+  color: #667eea;
+}
+
+.suggestion-item.highlighted {
+  background: rgba(103, 126, 234, 0.15);
+  color: #667eea;
+}
+
+.city-name {
+  font-weight: 600;
+}
+
+.country-name {
+  font-size: 12px;
+  opacity: 0.7;
+  margin-left: 8px;
+}
+
 .weather-image {
   display: flex;
   justify-content: center;

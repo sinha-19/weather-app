@@ -13,6 +13,35 @@ import humidity_icon from '../Assets/humidity.png';
 const WeatherApp = () => {
   const api_key = "cb3a051c385fa934d6e74650e77d4fbc";
 
+  // Popular cities for suggestions
+  const popularCities = [
+    { name: "London", country: "United Kingdom" },
+    { name: "New York", country: "United States" },
+    { name: "Tokyo", country: "Japan" },
+    { name: "Paris", country: "France" },
+    { name: "Sydney", country: "Australia" },
+    { name: "Dubai", country: "United Arab Emirates" },
+    { name: "Singapore", country: "Singapore" },
+    { name: "Mumbai", country: "India" },
+    { name: "Berlin", country: "Germany" },
+    { name: "Toronto", country: "Canada" },
+    { name: "Barcelona", country: "Spain" },
+    { name: "Rome", country: "Italy" },
+    { name: "Amsterdam", country: "Netherlands" },
+    { name: "Bangkok", country: "Thailand" },
+    { name: "Cairo", country: "Egypt" },
+    { name: "Moscow", country: "Russia" },
+    { name: "Beijing", country: "China" },
+    { name: "Seoul", country: "South Korea" },
+    { name: "Mexico City", country: "Mexico" },
+    { name: "Buenos Aires", country: "Argentina" },
+    { name: "Lagos", country: "Nigeria" },
+    { name: "Istanbul", country: "Turkey" },
+    { name: "Jakarta", country: "Indonesia" },
+    { name: "Manila", country: "Philippines" },
+    { name: "Karachi", country: "Pakistan" }
+  ];
+
   const [weatherData, setWeatherData] = useState({
     temperature: "24°C",
     location: "London",
@@ -29,6 +58,9 @@ const WeatherApp = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [searchInput, setSearchInput] = useState("");
+  const [suggestions, setSuggestions] = useState([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(-1);
 
   // Load default weather on component mount
   useEffect(() => {
@@ -96,27 +128,101 @@ const WeatherApp = () => {
     }
   };
 
-  const handleSearch = () => {
-    searchWeather(searchInput);
+  const handleInputChange = (e) => {
+    const value = e.target.value;
+    setSearchInput(value);
+    
+    if (value.length > 0) {
+      const filteredSuggestions = popularCities.filter(city =>
+        city.name.toLowerCase().includes(value.toLowerCase()) ||
+        city.country.toLowerCase().includes(value.toLowerCase())
+      ).slice(0, 8); // Limit to 8 suggestions
+      
+      setSuggestions(filteredSuggestions);
+      setShowSuggestions(true);
+      setSelectedSuggestionIndex(-1);
+    } else {
+      setShowSuggestions(false);
+      setSuggestions([]);
+    }
   };
 
-  const handleKeyPress = (e) => {
+  const handleSuggestionClick = (cityName) => {
+    setSearchInput(cityName);
+    setShowSuggestions(false);
+    searchWeather(cityName);
+  };
+
+  const handleSearch = () => {
+    searchWeather(searchInput);
+    setShowSuggestions(false);
+  };
+
+  const handleKeyDown = (e) => {
     if (e.key === 'Enter') {
-      handleSearch();
+      if (selectedSuggestionIndex >= 0 && suggestions[selectedSuggestionIndex]) {
+        handleSuggestionClick(suggestions[selectedSuggestionIndex].name);
+      } else {
+        handleSearch();
+      }
+    } else if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setSelectedSuggestionIndex(prev => 
+        prev < suggestions.length - 1 ? prev + 1 : prev
+      );
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setSelectedSuggestionIndex(prev => prev > 0 ? prev - 1 : -1);
+    } else if (e.key === 'Escape') {
+      setShowSuggestions(false);
+      setSelectedSuggestionIndex(-1);
+    }
+  };
+
+  const handleInputBlur = () => {
+    // Delay hiding suggestions to allow click events
+    setTimeout(() => {
+      setShowSuggestions(false);
+      setSelectedSuggestionIndex(-1);
+    }, 200);
+  };
+
+  const handleInputFocus = () => {
+    if (searchInput.length > 0 && suggestions.length > 0) {
+      setShowSuggestions(true);
     }
   };
 
   return (
     <div className='container'>
       <div className="top-bar">
-        <input 
-          type="text" 
-          className="cityInput" 
-          placeholder='Enter city name...'
-          value={searchInput}
-          onChange={(e) => setSearchInput(e.target.value)}
-          onKeyPress={handleKeyPress}
-        />
+        <div className="suggestions-container">
+          <input 
+            type="text" 
+            className="cityInput" 
+            placeholder='Enter city name...'
+            value={searchInput}
+            onChange={handleInputChange}
+            onKeyDown={handleKeyDown}
+            onBlur={handleInputBlur}
+            onFocus={handleInputFocus}
+            autoComplete="off"
+          />
+          {showSuggestions && suggestions.length > 0 && (
+            <div className="suggestions-dropdown">
+              {suggestions.map((city, index) => (
+                <div
+                  key={`${city.name}-${city.country}`}
+                  className={`suggestion-item ${index === selectedSuggestionIndex ? 'highlighted' : ''}`}
+                  onClick={() => handleSuggestionClick(city.name)}
+                >
+                  <span className="city-name">{city.name}</span>
+                  <span className="country-name">{city.country}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
         <div className="search-icon" onClick={handleSearch}>
           <img src={search_icon} alt="Search" />
         </div>
